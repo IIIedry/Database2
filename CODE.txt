@@ -1,0 +1,97 @@
+1) A procedure that groups by information
+
+create or replace PROCEDURE group_info AS 
+BEGIN  
+  FOR i IN (
+    SELECT user.name, user.surname, dealer.dealer_name, transaction.card_name, payment.card_payment, payment.payment_id, basket.basket_id
+    FROM user
+    LEFT JOIN dealer ON user.user_id = dealer.dealer_id
+    LEFT JOIN transaction ON user.user_id = transaction.t_id
+    FULL JOIN payment ON user_id = payment_id
+    LEFT Join basket ON user_id = basket_id
+    GROUP BY user.name, user.surname, dealer.dealer_name, transaction.card_name
+  )
+  LOOP
+    dbms_output.put_line('Name: ' || i.name || ', Surname: ' || i.surname || ', Dealer: ' || i.dealer_name || ', Card Name: ' || i.card_name || ', Cash Payment: ' || i.CARD_PAYMENT || ', Basket ID: ' || i.basket_id);
+  END LOOP;
+END;
+
+here I have a procedure that outputs all the information during the transaction. The user's first and last name, the dealer who sells the car, the card with which the payment was made, whether this car was in the basket, the transaction number, and groups it all
+----------------------------------------------------------------------------------------------------------------------------------
+2) A function that counts the number of records
+
+create or replace FUNCTION count_fun(inf_cond VARCHAR2) RETURN NUMBER IS 
+  quantity NUMBER; 
+BEGIN 
+  SELECT COUNT(*) INTO quantity 
+  FROM car_company cc 
+  JOIN characteristics ch ON cc.char_id_fk_ = ch.char_id 
+  JOIN car_manufacturers cmf ON cmf.COMPANY_ID_FK_ = cc.company_id 
+  JOIN brand b ON b.COMPANY_ID_FK_ = cc.company_id 
+  WHERE cc.company_name = inf_cond; 
+  RETURN quantity; 
+END;
+
+and here I have a function that outputs the number of remaining cars. From the companies that we write in the name, and displays their number if there is a match in characteristics, the country where this car is from, and if the car brand is the same
+----------------------------------------------------------------------------------------------------------------------------------
+3) A procedure that uses SQL%ROWCOUNT to determine the number of rows affected
+
+CREATE OR REPLACE PROCEDURE metd_sql (
+  in_word IN VARCHAR2,
+  out_count OUT NUMBER
+)
+IS
+BEGIN
+  out_count := 0;
+
+  UPDATE car_company
+  SET company_name = company_name || '+'
+  WHERE company_name LIKE '%' || in_word || '%';
+  out_count := out_count + SQL%ROWCOUNT;
+
+  IF out_count = 0 THEN
+    dbms_output.put_line('no matches for this query');
+  END IF;
+
+END;
+
+here is a procedure that checks how much data with the same company name that we write and outputs their number. And if there are no matches, output that there are no matches
+----------------------------------------------------------------------------------------------------------------------------------
+4) Add a user-defined exception that prohibits entering the name of an item (for example, a book) with a length of less than 5 characters
+
+create or replace PROCEDURE insert_new_car (
+    id IN security.id%TYPE,
+    safe_id IN security.safe_id%TYPE,
+    identify IN security.identify%TYPE,
+    stat_id_fk_ IN security.stat_id_fk_%type
+)
+IS
+    raise_error EXCEPTION;
+BEGIN
+    IF LENGTH(identify) < 5 THEN
+        RAISE raise_error;
+    ELSE
+        INSERT INTO security (id, safe_id, identify, stat_id_fk_) VALUES (id, safe_id, identify, stat_id_fk_);
+    END IF;
+    
+    EXCEPTION
+        WHEN raise_error THEN
+            DBMS_OUTPUT.PUT_LINE('Identify your security must be at least 5 characters long.');
+        when others then
+            DBMS_OUTPUT.put_line('Another mistake - - - - - # # # # #') ;   
+END;
+
+the procedure for maintaining security when delivering a car through a courier is checked here so that the password for transactions is not smaller than 5 characters in size
+----------------------------------------------------------------------------------------------------------------------------------
+5) Create a trigger before insertion for any object that will show the current number of rows in the table
+
+create or replace TRIGGER counting
+BEFORE INSERT ON transaction
+DECLARE
+  sumz NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO sumz FROM transaction;
+  DBMS_OUTPUT.PUT_LINE('Current number of rows in transaction table: ' || sumz);
+END;
+
+the following code is a trigger that notifies us how many transactions we had before inserting a new one, and we can set the next transaction as deleting data from the end if the number of transactions reaches 1,000,000, then everything will be fine with our data
